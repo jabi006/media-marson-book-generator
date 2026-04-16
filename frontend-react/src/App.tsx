@@ -1,10 +1,10 @@
 import {
-  ChangeEvent,
-  FormEvent,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
+    ChangeEvent,
+    FormEvent,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
 } from 'react';
 import { ChapterCard } from './components/chapter-card';
 import { ConfirmDialog } from './components/confirm-dialog';
@@ -12,16 +12,16 @@ import { LoadingOverlay } from './components/loading-overlay';
 import { StatusBadge } from './components/status-badge';
 import { ToastCenter, ToastItem } from './components/toast-center';
 import {
-  compileBook,
-  deleteBook,
-  downloadBook,
-  fetchBooks,
-  generateChapter,
-  generateOutline,
-  updateChapterReview,
-  updateFinalReview,
-  updateOutlineReview,
-  uploadSpreadsheet,
+    compileBook,
+    deleteBook,
+    downloadBook,
+    fetchBooks,
+    generateChapter,
+    generateOutline,
+    updateChapterReview,
+    updateFinalReview,
+    updateOutlineReview,
+    uploadSpreadsheet,
 } from './lib/api';
 import { Book } from './lib/types';
 import { formatReviewStatus, formatStage } from './lib/utils';
@@ -31,6 +31,7 @@ type ViewMode = 'dashboard' | 'detail';
 
 interface SingleBookFormState {
   title: string;
+  numberOfChapters: string;
   notesOnOutlineBefore: string;
   notesOnOutlineAfter: string;
   statusOutlineNotes: string;
@@ -57,6 +58,7 @@ interface NotificationItem {
 
 const INITIAL_SINGLE_BOOK_FORM: SingleBookFormState = {
   title: '',
+  numberOfChapters: '',
   notesOnOutlineBefore: '',
   notesOnOutlineAfter: '',
   statusOutlineNotes: 'no',
@@ -208,9 +210,14 @@ function App() {
   );
 
   const loading = pendingRequests > 0;
+  const singleBookChaptersValid =
+    singleBookForm.numberOfChapters.trim() !== '' &&
+    Number.isInteger(Number(singleBookForm.numberOfChapters)) &&
+    Number(singleBookForm.numberOfChapters) >= 1;
   const singleBookReady =
     singleBookForm.title.trim().length > 0 &&
-    singleBookForm.notesOnOutlineBefore.trim().length > 0;
+    singleBookForm.notesOnOutlineBefore.trim().length > 0 &&
+    singleBookChaptersValid;
 
   useEffect(() => {
     void refreshBooks(true);
@@ -1017,6 +1024,31 @@ function App() {
                   </label>
 
                   <label className="field">
+                    <span>Number of Chapters</span>
+                    <input
+                      type="number"
+                      min={1}
+                      step={1}
+                      placeholder="e.g. 10"
+                      value={singleBookForm.numberOfChapters}
+                      onChange={(event) =>
+                        updateSingleBookField(
+                          'numberOfChapters',
+                          event.target.value,
+                        )
+                      }
+                    />
+                    {singleBookForm.numberOfChapters !== '' &&
+                      !singleBookChaptersValid && (
+                        <span className="field__error">
+                          At least 1 chapter is required.
+                        </span>
+                      )}
+                  </label>
+                </div>
+
+                <div className="field-grid">
+                  <label className="field">
                     <span>Outline Notes Status</span>
                     <select
                       value={singleBookForm.statusOutlineNotes}
@@ -1105,7 +1137,7 @@ function App() {
                     Upload CSV or Excel for multiple books
                   </span>
                   <span className="upload-dropzone__copy">
-                    One row creates one book and stores it in Supabase Storage.
+                    One row creates one book. Required columns: <code>title</code>, <code>number_of_chapters</code> (min 1), <code>notes_on_outline_before</code>.
                   </span>
                   <strong>{uploadFile?.name ?? 'No file selected yet'}</strong>
                 </label>
@@ -1394,6 +1426,7 @@ function buildSingleBookImportFile(form: SingleBookFormState) {
   const rows = [
     [
       'title',
+      'number_of_chapters',
       'notes_on_outline_before',
       'notes_on_outline_after',
       'status_outline_notes',
@@ -1402,6 +1435,7 @@ function buildSingleBookImportFile(form: SingleBookFormState) {
     ],
     [
       form.title,
+      form.numberOfChapters,
       form.notesOnOutlineBefore,
       form.notesOnOutlineAfter,
       form.statusOutlineNotes,

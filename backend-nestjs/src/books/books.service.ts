@@ -1,7 +1,7 @@
 import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
+    BadRequestException,
+    Injectable,
+    NotFoundException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import * as XLSX from 'xlsx';
@@ -12,10 +12,10 @@ import { ReviewStatus } from '../common/enums/review-status.enum';
 import { ExportService } from '../export/export.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { SupabaseStorageService } from '../storage/supabase-storage.service';
+import { BookRecord, ChapterRecord, WorkflowEventRecord } from './book.types';
 import { UpdateChapterReviewDto } from './dto/update-chapter-review.dto';
 import { UpdateFinalReviewDto } from './dto/update-final-review.dto';
 import { UpdateOutlineReviewDto } from './dto/update-outline-review.dto';
-import { BookRecord, ChapterRecord, WorkflowEventRecord } from './book.types';
 
 interface UploadedSpreadsheetFile {
   buffer: Buffer;
@@ -79,6 +79,13 @@ export class BooksService {
         'notes_on_outline_before',
         'notesOnOutlineBefore',
       ]);
+      const numberOfChaptersRaw = this.readString(row, [
+        'number_of_chapters',
+        'numberOfChapters',
+      ]);
+      const numberOfChapters = numberOfChaptersRaw
+        ? Math.max(1, Math.round(Number(numberOfChaptersRaw)))
+        : null;
 
       if (!title || !notesOnOutlineBefore) {
         throw new BadRequestException(
@@ -86,9 +93,16 @@ export class BooksService {
         );
       }
 
+      if (numberOfChaptersRaw && (isNaN(Number(numberOfChaptersRaw)) || Number(numberOfChaptersRaw) < 1)) {
+        throw new BadRequestException(
+          `Row "${title}": number_of_chapters must be a whole number of at least 1.`,
+        );
+      }
+
       return {
         title,
         sourceFileName: file.originalname,
+        numberOfChapters,
         notesOnOutlineBefore,
         notesOnOutlineAfter: this.readString(row, [
           'notes_on_outline_after',
@@ -167,14 +181,20 @@ export class BooksService {
       notesOnOutlineBefore: book.notesOnOutlineBefore,
       existingOutline: book.outlineText,
       notesOnOutlineAfter: book.notesOnOutlineAfter,
+      numberOfChapters: book.numberOfChapters ?? undefined,
     });
+
+    // Enforce exact chapter count if specified — AI may return more or fewer.
+    const chapterPlans = book.numberOfChapters
+      ? outline.chapters.slice(0, book.numberOfChapters)
+      : outline.chapters;
 
     const timestamp = this.now();
     const updatedBook: BookRecord = {
       ...book,
       outlineText: outline.outlineText,
       workflowStatus: BookWorkflowStatus.OutlineReady,
-      chapters: outline.chapters.map((chapter) => ({
+      chapters: chapterPlans.map((chapter) => ({
         id: randomUUID(),
         bookId,
         chapterNumber: chapter.number,
@@ -249,9 +269,12 @@ export class BooksService {
       );
     }
 
-    if (book.statusOutlineNotes !== ReviewStatus.NoNotesNeeded) {
+    const outlineApproved =
+      book.statusOutlineNotes === ReviewStatus.NoNotesNeeded ||
+      book.statusOutlineNotes === ReviewStatus.Yes;
+    if (!outlineApproved) {
       throw new BadRequestException(
-        'Mark the outline review as "No notes needed" before generating chapters.',
+        'Save the outline review (set status to "Yes" or "No Notes Needed") before generating chapters.',
       );
     }
 
@@ -511,6 +534,7 @@ export class BooksService {
   private buildNewBookRecord(input: {
     title: string;
     sourceFileName: string | null;
+    numberOfChapters?: number | null;
     notesOnOutlineBefore: string;
     notesOnOutlineAfter?: string | null;
     statusOutlineNotes?: ReviewStatus | null;
@@ -523,6 +547,7 @@ export class BooksService {
       id: randomUUID(),
       title: input.title,
       sourceFileName: input.sourceFileName,
+      numberOfChapters: input.numberOfChapters ?? null,
       notesOnOutlineBefore: input.notesOnOutlineBefore,
       outlineText: null,
       notesOnOutlineAfter: input.notesOnOutlineAfter ?? null,

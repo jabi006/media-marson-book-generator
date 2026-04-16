@@ -1,11 +1,11 @@
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 import {
-  ChapterGenerationResult,
-  OutlineGenerationResult,
+    ChapterGenerationResult,
+    OutlineGenerationResult,
 } from '../common/types/ai.types';
 
 type ProviderName = 'gemini' | 'openai' | 'claude';
@@ -40,7 +40,12 @@ export class AiService {
     notesOnOutlineBefore: string;
     existingOutline?: string | null;
     notesOnOutlineAfter?: string | null;
+    numberOfChapters?: number;
   }): Promise<OutlineGenerationResult> {
+    const chapterCountInstruction = input.numberOfChapters
+      ? `Produce exactly ${input.numberOfChapters} chapter(s).`
+      : 'Produce between 5 and 8 chapters.';
+
     const prompt = `
 Return strict JSON only.
 Schema:
@@ -57,7 +62,7 @@ Existing outline: ${input.existingOutline ?? 'none'}
 Post-outline editor notes: ${input.notesOnOutlineAfter ?? 'none'}
 
 Rules:
-- Produce 5 to 8 chapters.
+- ${chapterCountInstruction}
 - Make chapter numbering sequential starting at 1.
 - Keep the outline practical and logically progressive.
 - If post-outline notes exist, use them to improve the outline.

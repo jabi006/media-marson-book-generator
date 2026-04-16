@@ -589,6 +589,11 @@ button {
   gap: 8px;
 }
 
+.field__error {
+  font-size: 0.8rem;
+  color: #d0392b;
+}
+
 .field-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -29,6 +29,7 @@ export interface BookRecord {
   id: string;
   title: string;
   sourceFileName: string | null;
+  numberOfChapters: number | null;
   notesOnOutlineBefore: string;
   outlineText: string | null;
   notesOnOutlineAfter: string | null;
