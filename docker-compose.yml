@@ -1,0 +1,36 @@
+services:
+  backend:
+    build:
+      context: ./backend-nestjs
+    container_name: media-marson-backend
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      FRONTEND_URL: ${FRONTEND_URL}
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY}
+      SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY}
+      SUPABASE_STORAGE_BUCKET: ${SUPABASE_STORAGE_BUCKET}
+      NOTIFICATION_TO: ${NOTIFICATION_TO}
+      RESEND_FROM: ${RESEND_FROM}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_MODEL: ${GEMINI_MODEL}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL}
+      CLAUDE_API_KEY: ${CLAUDE_API_KEY}
+      CLAUDE_MODEL: ${CLAUDE_MODEL}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+    ports:
+      - "3000:3000"
+
+  frontend:
+    build:
+      context: ./frontend-react
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+    container_name: media-marson-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5173:5173"

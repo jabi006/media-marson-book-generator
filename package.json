@@ -1,0 +1,18 @@
+{
+  "name": "media-marson-book-generator",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "backend-nestjs",
+    "frontend-react"
+  ],
+  "scripts": {
+    "dev:backend": "npm run start:dev --workspace backend-nestjs",
+    "dev:frontend": "npm run dev --workspace frontend-react",
+    "build": "npm run build --workspace backend-nestjs && npm run build --workspace frontend-react",
+    "test": "npm run test --workspace backend-nestjs && npm run test --workspace frontend-react",
+    "lint": "npm run lint --workspace backend-nestjs && npm run lint --workspace frontend-react",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down -v"
+  }
+}

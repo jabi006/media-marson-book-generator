@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ReviewStatus {
+  yes
+  no
+  no_notes_needed
+}
+
+enum BookWorkflowStatus {
+  imported
+  outline_ready
+  waiting_outline_notes
+  outline_paused
+  chapter_ready
+  waiting_chapter_notes
+  chapter_paused
+  ready_for_final_review
+  final_paused
+  completed
+  error
+}
+
+enum ChapterGenerationStatus {
+  pending
+  ready_for_review
+  waiting_for_notes
+  paused
+  approved
+}
+
+model Book {
+  id                     String             @id @default(cuid())
+  title                  String
+  sourceFileName         String?
+  notesOnOutlineBefore   String
+  outlineText            String?
+  notesOnOutlineAfter    String?
+  statusOutlineNotes     ReviewStatus?
+  finalReviewNotesStatus ReviewStatus?
+  finalReviewNotes       String?
+  workflowStatus         BookWorkflowStatus @default(imported)
+  bookOutputStatus       String             @default("not_ready")
+  outputPdfPath          String?
+  chapters               Chapter[]
+  events                 WorkflowEvent[]
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+}
+
+model Chapter {
+  id                 String                  @id @default(cuid())
+  bookId             String
+  book               Book                    @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  chapterNumber      Int
+  title              String
+  outlineSummary     String?
+  content            String?
+  summary            String?
+  chapterNotesStatus ReviewStatus?
+  chapterNotes       String?
+  generationStatus   ChapterGenerationStatus @default(pending)
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+
+  @@unique([bookId, chapterNumber])
+}
+
+model WorkflowEvent {
+  id        String   @id @default(cuid())
+  bookId    String
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  chapterId String?
+  type      String
+  message   String
+  createdAt DateTime @default(now())
+}
